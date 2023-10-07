@@ -3,11 +3,14 @@ const express = require('express');
 const turf = require('turf')
 const axios = require('axios');
 const Papa = require('papaparse');
+require('dotenv').config();
+const firebase = require('./firebase.js');
 
 const app = express();
 const port = process.env.PORT ?? 3000;
 
-app.use(express.static('public'))
+app.use(express.static('public'));
+app.use(express.json());
 
 app.get('/', (req, res) => {
     res.redirect('/');
@@ -45,7 +48,9 @@ function todayString() {
 }
 
 app.get('/thermalAnomalies', async (req, res) => {
-    const {lat, long, radius} = req.query;
+    const lat = req.body.latitude;
+    const long = req.body.longitude;
+    const radius = req.body.radius;
 
     const box = areaCoordinates(lat,long,radius);
     const coordinates = `${box.west},${box.south},${box.east},${box.north}`;
@@ -67,6 +72,7 @@ app.get('/thermalAnomalies', async (req, res) => {
                     res.json(data);
                 },
                 error: function (error) {
+                    //devolver un res status correspondiente
                     console.error('CSV parsing error:', error.message);
                 },
             });
@@ -77,6 +83,18 @@ app.get('/thermalAnomalies', async (req, res) => {
         console.error('Error fetching CSV data:', error);
         res.status(500).json({ error: 'Internal server error.' });
     }
+})
+
+app.post('/createEventDTO', (req,res) => {
+    const lat = req.body.latitude;
+    const long = req.body.longitude;
+    const token = req.body.token;
+})
+
+app.get('/ping', async (req,res) => {
+    const usersRef = await firebase.db.collection("users").get();
+    const users = usersRef.docs.map((doc) => doc.data());
+    res.status(201).json(users);
 })
 
 //scheduledFunctions.initScheduledJobs();
