@@ -4,6 +4,7 @@ const firebase = require("./firebase.js");
 const utilities = require("./utilities.js");
 const zod = require("zod");
 const cors = require("cors");
+//const divercron = require("./divercron.js");
 
 const app = express();
 const port = process.env.PORT ?? 8080;
@@ -85,10 +86,20 @@ app.get("/ping", async (req, res) => {
 });
 
 app.post("/createEventDTO", async (req, res) => {
+  const token = request.headers.get("Authorization")?.split("Bearer ")[1];
+
+  if (!token) {
+    return new Response(JSON.stringify({ message: "Unauthorized" }), {
+      status: 401,
+      headers: {
+        "content-type": "application/json",
+      },
+    });
+  }
+
   const reqSquema = zod.object({
     latitude: zod.number().min(-90).max(90),
-    longitude: zod.number().min(-180).max(180),
-    token: zod.string(),
+    longitude: zod.number().min(-180).max(180)
   });
   const result = reqSquema.safeParse(req.body);
   if (!result.success) {
@@ -97,7 +108,6 @@ app.post("/createEventDTO", async (req, res) => {
 
   const lat = req.body.latitude;
   const long = req.body.longitude;
-  const token = req.body.token;
 
   //Validar token
   let auth = null;
@@ -105,10 +115,11 @@ app.post("/createEventDTO", async (req, res) => {
   let userInDB = null;
   try {
     auth = firebase.admin.auth();
-    user = await auth.getUser(token);
+    const decodedToken = await auth.verifyIdToken(token);
+    user = await auth.getUser(decodedToken.uid);
     userInDB = await firebase.db
       .collection("users")
-      .where("uid", "==", token)
+      .where("uid", "==", decodedToken.uid)
       .get();
 
     if (userInDB.empty) {
@@ -157,6 +168,8 @@ app.post("/createEventDTO", async (req, res) => {
   //Devolver evento
   res.status(201).json(newEvent);
 });
+
+//divercron.killEventsPerHour();
 
 app.listen(port, () => {
   console.log(`App listening on port ${port}`);
