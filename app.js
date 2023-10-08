@@ -196,6 +196,68 @@ app.post("/eventsInArea", async (req, res) => {
   return res.json(events).status(200);
 });
 
+app.post("/createOrganizationInterestArea", async (req, res) => {
+  const token = req.headers.authorization.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unathorized" });
+  }
+
+  const reqSquema = zod.object({
+    latitude: zod.number().min(-90).max(90),
+    longitude: zod.number().min(-180).max(180),
+    radius: zod.number().positive(),
+  });
+  const result = reqSquema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ error: JSON.parse(result.error.message) });
+  }
+
+  const lat = req.body.latitude;
+  const long = req.body.longitude;
+  const radius = req.body.radius;
+
+  //Validar token
+  let auth = null;
+  let user = null;
+  let decodedToken = null;
+  try {
+    auth = firebase.admin.auth();
+    decodedToken = await auth.verifyIdToken(token);
+    user = await auth.getUser(decodedToken.uid);
+  } catch (error) {
+    res.status(401).json({
+      error: "Invalid user token.",
+    });
+    return;
+  }
+
+  try {
+    const organizationUID = user.organizationUID;
+    if (!organizationUID) {
+      res.status(404).json({ message: 'Organization not found' });
+      return;
+    }
+    const organizationRef = await firebase.db.collection("organizations").doc(organizationUID);
+    const organizationSnapshot = await organizationRef.get();
+    if (organizationSnapshot.exists) {
+      let data = organizationSnapshot.data();
+      data.interestArea = {
+        latitude: lat,
+        longitude: long,
+        radius: radius
+      };
+      await organizationRef.update(data);
+      res.status(201).json(data);
+      return;
+    } 
+    res.status(404).json({ message: 'Organization not found' });
+    return;
+  } catch (error) {
+    res.status(404).json({ message: 'Organization not found' });
+    return;
+  }
+});
 
 divercron.killEventsPerHour();
 
