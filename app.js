@@ -181,7 +181,7 @@ app.post("/eventsInArea", async (req, res) => {
   const eventsRef = await firebase.db.collection("events").get();
   let events = [];
   eventsRef.docs.map((doc) => {
-    events.push(doc.data());
+    events.push({ ...doc.data(), id: doc.id });
   });
   events = events.filter(function (event) {
     return utilities.pointInCircle(
@@ -235,26 +235,28 @@ app.post("/createOrganizationInterestArea", async (req, res) => {
   try {
     const organizationUID = user.organizationUID;
     if (!organizationUID) {
-      res.status(404).json({ message: 'Organization not found' });
+      res.status(404).json({ message: "Organization not found" });
       return;
     }
-    const organizationRef = await firebase.db.collection("organizations").doc(organizationUID);
+    const organizationRef = await firebase.db
+      .collection("organizations")
+      .doc(organizationUID);
     const organizationSnapshot = await organizationRef.get();
     if (organizationSnapshot.exists) {
       let data = organizationSnapshot.data();
       data.interestArea = {
         latitude: lat,
         longitude: long,
-        radius: radius
+        radius: radius,
       };
       await organizationRef.update(data);
       res.status(201).json(data);
       return;
-    } 
-    res.status(404).json({ message: 'Organization not found' });
+    }
+    res.status(404).json({ message: "Organization not found" });
     return;
   } catch (error) {
-    res.status(404).json({ message: 'Organization not found' });
+    res.status(404).json({ message: "Organization not found" });
     return;
   }
 });
@@ -267,7 +269,7 @@ app.post("/endEvent", async (req, res) => {
   }
 
   const reqSquema = zod.object({
-    eventUID: zod.string()
+    eventUID: zod.string(),
   });
   const result = reqSquema.safeParse(req.body);
   if (!result.success) {
@@ -294,31 +296,32 @@ app.post("/endEvent", async (req, res) => {
   try {
     const organizationUID = user.organizationUID;
     if (!organizationUID) {
-      res.status(404).json({ message: 'Organization not found' });
+      res.status(404).json({ message: "Organization not found" });
       return;
     }
-    const organizationRef = await firebase.db.collection("organizations").doc(organizationUID);
+    const organizationRef = await firebase.db
+      .collection("organizations")
+      .doc(organizationUID);
     const organizationSnapshot = await organizationRef.get();
     if (organizationSnapshot.exists) {
       const eventRef = await firebase.db.collection("events").doc(eventUID);
       const eventSnapshot = await eventRef.get();
       if (eventSnapshot.exists) {
         await firebase.db.collection("oldEvents").add(eventSnapshot.data());
-        await eventRef.delete()
-        res.status(200).json({message: 'Event ended'});
-        return
+        await eventRef.delete();
+        res.status(200).json({ message: "Event ended" });
+        return;
       }
-      res.status(404).json({message: 'Event not found'});
+      res.status(404).json({ message: "Event not found" });
       return;
-    } 
-    res.status(404).json({ message: 'Organization not found' });
+    }
+    res.status(404).json({ message: "Organization not found" });
     return;
   } catch (error) {
-    res.status(404).json({ message: 'Organization not found' });
+    res.status(404).json({ message: "Organization not found" });
     return;
   }
 });
-
 
 divercron.killEventsPerHour();
 divercron.notifyInterestAreas();
