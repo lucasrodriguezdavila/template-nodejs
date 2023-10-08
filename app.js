@@ -10,8 +10,8 @@ const app = express();
 const port = process.env.PORT ?? 8080;
 
 const allowedOrigins = [
-  "www.terramida.vercel.app",
-  "terramida.vercel.app",
+  "https://www.terramida.vercel.app",
+  "https://terramida.vercel.app",
   "http://localhost:3000",
 ];
 app.use(
@@ -21,11 +21,11 @@ app.use(
         return callback(null, true);
       }
 
-      if (!allowedOrigins.includes(origin)) {
-        const msg =
-          "The CORS policy for this site does not allow access from the specified Origin.";
-        return callback(new Error(msg), false);
-      }
+      //   if (!allowedOrigins.includes(origin)) {
+      //     const msg =
+      //       "The CORS policy for this site does not allow access from the specified Origin.";
+      //     return callback(new Error(msg), false);
+      //   }
       return callback(null, true);
     },
   })
