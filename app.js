@@ -136,9 +136,17 @@ app.post("/createEventDTO", async (req, res) => {
   }
 
   //Chequeo de AT
-  const box = utilities.areaCoordinates(lat, long, 0.5);
+  const box = utilities.areaCoordinates(lat, long, 1.5);
   const apiUrl = utilities.buildApiUrl(box, new Date());
   let thermalAnomalies = await utilities.retrieveThermalAnomalies(apiUrl);
+  if (thermalAnomalies.length === 0) {
+    let yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayApiUrl = utilities.buildApiUrl(box, yesterday);
+    thermalAnomalies = await utilities.retrieveThermalAnomalies(
+      yesterdayApiUrl
+    );
+  }
   if (!thermalAnomalies.length) {
     res.status(422).json({
       error: "No thermal anomalies detected in the zone.",
