@@ -2,6 +2,7 @@ const express = require('express');
 require('dotenv').config();
 const firebase = require('./firebase.js');
 const utilities = require('./utilities.js');
+const zod = require('zod');
 
 const app = express();
 const port = process.env.PORT ?? 3000;
@@ -14,10 +15,19 @@ app.get('/', (req, res) => {
 })
 
 app.get('/thermalAnomalies', async (req, res) => {
+    const reqSquema = zod.object({
+        latitude: zod.number().min(-90).max(90),
+        longitude: zod.number().min(-180).max(180),
+        radius: zod.number().positive()
+    });
+    const result = reqSquema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({ error: JSON.parse(result.error.message) })
+    }
+
     const lat = req.body.latitude;
     const long = req.body.longitude;
     const radius = req.body.radius;
-
     const box = utilities.areaCoordinates(lat,long,radius);
     const apiUrl = utilities.buildApiUrl(box);
     let thermalAnomalies = await utilities.retrieveThermalAnomalies(apiUrl);
@@ -34,6 +44,16 @@ app.get('/ping', async (req,res) => {
 })
 
 app.post('/createEventDTO', async (req,res) => {
+    const reqSquema = zod.object({
+        latitude: zod.number().min(-90).max(90),
+        longitude: zod.number().min(-180).max(180),
+        token: zod.string()
+    });
+    const result = reqSquema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({ error: JSON.parse(result.error.message) })
+    }
+
     const lat = req.body.latitude;
     const long = req.body.longitude;
     const token = req.body.token;
