@@ -86,20 +86,15 @@ app.get("/ping", async (req, res) => {
 });
 
 app.post("/createEventDTO", async (req, res) => {
-  const token = request.headers.get("Authorization")?.split("Bearer ")[1];
+  const token = req.headers.authorization.split(" ")[1];
 
   if (!token) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-      headers: {
-        "content-type": "application/json",
-      },
-    });
+    return res.status(401).json({ error: "Unathorized" });
   }
 
   const reqSquema = zod.object({
     latitude: zod.number().min(-90).max(90),
-    longitude: zod.number().min(-180).max(180)
+    longitude: zod.number().min(-180).max(180),
   });
   const result = reqSquema.safeParse(req.body);
   if (!result.success) {
@@ -121,13 +116,6 @@ app.post("/createEventDTO", async (req, res) => {
       .collection("users")
       .where("uid", "==", decodedToken.uid)
       .get();
-
-    if (userInDB.empty) {
-      res.status(401).json({
-        error: "Invalid user token.",
-      });
-      return;
-    }
   } catch (error) {
     res.status(401).json({
       error: "Invalid user token.",
@@ -136,7 +124,7 @@ app.post("/createEventDTO", async (req, res) => {
   }
 
   //Chequeo de AT
-  const box = utilities.areaCoordinates(lat, long, 0.5);
+  const box = utilities.areaCoordinates(lat, long, 2);
   const apiUrl = utilities.buildApiUrl(box, new Date());
   let thermalAnomalies = await utilities.retrieveThermalAnomalies(apiUrl);
   if (!thermalAnomalies.length) {
