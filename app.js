@@ -165,6 +165,38 @@ app.post("/createEventDTO", async (req, res) => {
   res.status(201).json({ newEvent, id: newEventAdd.id });
 });
 
+app.post("/eventsInArea", async (req, res) => {
+  const reqSquema = zod.object({
+    latitude: zod.number().min(-90).max(90),
+    longitude: zod.number().min(-180).max(180),
+  });
+  const result = reqSquema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.json({ error: result.error.message }).status(400);
+  }
+
+  const lat = req.body.latitude;
+  const long = req.body.longitude;
+  const eventsRef = await firebase.db.collection("events").get();
+  let events = [];
+  eventsRef.docs.map((doc) => {
+    events.push(doc.data());
+  });
+  events = events.filter(function (event) {
+    return utilities.pointInCircle(
+      lat,
+      long,
+      event.initialLatitude,
+      event.initialLongitude,
+      2
+    );
+  });
+
+  return res.json(events).status(200);
+});
+
+
 divercron.killEventsPerHour();
 
 app.listen(port, () => {
