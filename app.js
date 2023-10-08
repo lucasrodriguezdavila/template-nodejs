@@ -20,7 +20,6 @@ app.get('/thermalAnomalies', async (req, res) => {
 
     const box = utilities.areaCoordinates(lat,long,radius);
     const apiUrl = utilities.buildApiUrl(box);
-    
     let thermalAnomalies = await utilities.retrieveThermalAnomalies(apiUrl);
     thermalAnomalies = thermalAnomalies.filter(function (point) {
         return utilities.pointInCircle(lat,long,point.latitude,point.longitude,radius)
@@ -40,28 +39,32 @@ app.post('/createEventDTO', async (req,res) => {
     const token = req.body.token;
 
     //Validar token
-    const auth = firebase.admin.auth();
+    let auth = null;
+    let user = null;
+    let userInDB = null;
     try {
-        const user = await auth.getUser(token);
-        const userInDB = await db.collection("users").doc(user.uid).get();
-        if (user.empty) {
+        auth = firebase.admin.auth();
+        user = await auth.getUser(token);
+        userInDB = await firebase.db.collection("users").where('uid', '==', token).get();
+        
+        if (userInDB.empty) {
             res.status(401).json({
                 error: "Invalid user token."
             });
             return;
         }
+
     } catch (error) {
         res.status(401).json({
             error: "Invalid user token."
         });
         return;
     }
-
+    
     //Chequeo de AT
     const box = utilities.areaCoordinates(lat,long,0.4);
     const apiUrl = utilities.buildApiUrl(box);
     let thermalAnomalies = await utilities.retrieveThermalAnomalies(apiUrl);
-    
     if (!thermalAnomalies.length) {
         res.status(422).json({
             error: "No thermal anomalies detected in the zone."
@@ -70,17 +73,18 @@ app.post('/createEventDTO', async (req,res) => {
     }
 
     //Crear evento
-    const newEvent = await db.collection('events').add({
+    const newEvent = {
         initialLatitude: lat,
         initialLongitude: long,
-        starterUser: user,
         thermalAnomalies: thermalAnomalies,
         comments: []
-    });
+    };
+    const newEventAdd = await firebase.db.collection('events').add(newEvent);
 
     //Avisar a organizaciones
     const organizationsRef = await firebase.db.collection("organizations").get();
-    let organizations = organizationsRef.docs.map((doc) => {doc.data()});
+    let organizations = [];
+    organizationsRef.docs.map((doc) => {organizations.push(doc.data())});
     organizations.forEach(function (organization) {
         utilities.sendNotification(organization, newEvent);
     })
