@@ -4,7 +4,7 @@ const firebase = require("./firebase.js");
 const utilities = require("./utilities.js");
 const zod = require("zod");
 const cors = require("cors");
-//const divercron = require("./divercron.js");
+const divercron = require("./divercron.js");
 
 const app = express();
 const port = process.env.PORT ?? 8080;
@@ -177,7 +177,7 @@ app.post("/createEventDTO", async (req, res) => {
   res.status(201).json(newEvent);
 });
 
-//divercron.killEventsPerHour();
+divercron.killEventsPerHour();
 
 app.listen(port, () => {
   console.log(`App listening on port ${port}`);
