@@ -162,7 +162,7 @@ app.post("/createEventDTO", async (req, res) => {
   });
 
   //Devolver evento
-  res.status(201).json(newEvent);
+  res.status(201).json({ newEvent, id: newEventAdd.id });
 });
 
 divercron.killEventsPerHour();
