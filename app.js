@@ -259,6 +259,67 @@ app.post("/createOrganizationInterestArea", async (req, res) => {
   }
 });
 
+app.post("/endEvent", async (req, res) => {
+  const token = req.headers.authorization.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unathorized" });
+  }
+
+  const reqSquema = zod.object({
+    eventUID: zod.string()
+  });
+  const result = reqSquema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ error: JSON.parse(result.error.message) });
+  }
+
+  const eventUID = req.body.eventUID;
+
+  //Validar token
+  let auth = null;
+  let user = null;
+  let decodedToken = null;
+  try {
+    auth = firebase.admin.auth();
+    decodedToken = await auth.verifyIdToken(token);
+    user = await auth.getUser(decodedToken.uid);
+  } catch (error) {
+    res.status(401).json({
+      error: "Invalid user token.",
+    });
+    return;
+  }
+
+  try {
+    const organizationUID = user.organizationUID;
+    if (!organizationUID) {
+      res.status(404).json({ message: 'Organization not found' });
+      return;
+    }
+    const organizationRef = await firebase.db.collection("organizations").doc(organizationUID);
+    const organizationSnapshot = await organizationRef.get();
+    if (organizationSnapshot.exists) {
+      const eventRef = await firebase.db.collection("events").doc(eventUID);
+      const eventSnapshot = await eventRef.get();
+      if (eventSnapshot.exists) {
+        await firebase.db.collection("oldEvents").add(eventSnapshot.data());
+        await eventRef.delete()
+        res.status(200).json({message: 'Event ended'});
+        return
+      }
+      res.status(404).json({message: 'Event not found'});
+      return;
+    } 
+    res.status(404).json({ message: 'Organization not found' });
+    return;
+  } catch (error) {
+    res.status(404).json({ message: 'Organization not found' });
+    return;
+  }
+});
+
+
 divercron.killEventsPerHour();
 divercron.notifyInterestAreas();
 
