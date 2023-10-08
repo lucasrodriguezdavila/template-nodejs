@@ -1,6 +1,8 @@
 const turf = require('turf');
 const axios = require('axios');
 const Papa = require('papaparse');
+const nodemailer = require('nodemailer');
+require('dotenv').config();
 
 const areaCoordinates = (lat, long, radius) => {
     const point = turf.point([long,lat]);
@@ -68,3 +70,35 @@ const retrieveThermalAnomalies = async (apiUrl) => {
     return thermalAnomalies
 }
 exports.retrieveThermalAnomalies = retrieveThermalAnomalies;
+
+const sendNotification = async (organizations, newEvent) => {
+    const interestArea = organization.interestArea;
+    if (!interestArea) {
+        return false;
+    }
+
+    const hasSomeAnomaly = newEvent.thermalAnomalies.some(function (point) {
+        return utilities.pointInCircle(interestArea.latitude,interestArea.longitude,point.latitude,point.longitude,interestArea.radius)
+    })
+    if (!hasSomeAnomaly) {
+        return false;
+    }
+
+    const transporter = nodemailer.createTransport({
+        host: "smtp.sendgrid.net",
+        port: 465,
+        secure: true,
+        auth: {
+          user: "apikey",
+          pass: process.env.SENDGRID_API_KEY,
+        },
+      });
+
+    await transporter.sendMail({
+        from: process.env.SENDER_EMAIL,
+        to: organization.email,
+        subject: "Hay un posible INCENDIO en tu zona de interés",
+        text: `¡Revise ya la aplicación! El incendio está en ${newEvent.initialLatitude} (latitud) y ${newEvent.initialLongitude} (longitud).`
+    });
+}
+exports.sendNotification = sendNotification;
