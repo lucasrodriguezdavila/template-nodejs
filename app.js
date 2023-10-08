@@ -14,7 +14,7 @@ app.get('/', (req, res) => {
     res.redirect('/');
 })
 
-app.get('/thermalAnomalies', async (req, res) => {
+app.post('/thermalAnomalies', async (req, res) => {
     const reqSquema = zod.object({
         latitude: zod.number().min(-90).max(90),
         longitude: zod.number().min(-180).max(180),
