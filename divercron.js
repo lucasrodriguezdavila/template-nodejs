@@ -23,6 +23,7 @@ const killEventsPerHour = () => {
       }
       //Si no hay, elimina el evento
       if (thermalAnomalies.length === 0) {
+        firebase.db.collection("oldEvents").add(doc.data());
         doc.ref.delete();
       }
     });
