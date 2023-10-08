@@ -1,5 +1,6 @@
 const CronJob = require("node-cron");
 const firebase = require("./firebase.js");
+const utilities = require("./utilities.js");
 
 const killEventsPerHour = () => {
   //Cada hora
@@ -30,3 +31,32 @@ const killEventsPerHour = () => {
   scheduledJobFunction.start();
 }
 exports.killEventsPerHour = killEventsPerHour;
+
+const notifyInterestAreas = () => {
+  //Cada hora
+  const scheduledJobFunction = CronJob.schedule("0 * * * *", async () => {
+    const organizationsRef = admin.firestore().collection('organizations');
+    const orgSnapshot = await organizationsRef.get();
+    const organizations = [];
+    orgSnapshot.forEach((doc) => {
+      organizations.push(doc.data());
+    });
+
+    const eventsRef = admin.firestore().collection('events');
+    const eventsSnapshot = await eventsRef.get();
+    const events = [];
+    eventsSnapshot.forEach((doc) => {
+      events.push(doc.data());
+    });
+
+    organizations.forEach((org) => {
+      events.forEach((evt) => {
+        utilities.sendNotification(org, evt)
+      })
+    })
+
+  });
+
+  scheduledJobFunction.start();
+}
+exports.notifyInterestAreas = notifyInterestAreas;

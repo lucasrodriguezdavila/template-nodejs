@@ -260,6 +260,7 @@ app.post("/createOrganizationInterestArea", async (req, res) => {
 });
 
 divercron.killEventsPerHour();
+divercron.notifyInterestAreas();
 
 app.listen(port, () => {
   console.log(`App listening on port ${port}`);
