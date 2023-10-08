@@ -29,8 +29,16 @@ app.get('/thermalAnomalies', async (req, res) => {
     const long = req.body.longitude;
     const radius = req.body.radius;
     const box = utilities.areaCoordinates(lat,long,radius);
-    const apiUrl = utilities.buildApiUrl(box);
+    const apiUrl = utilities.buildApiUrl(box, new Date());
     let thermalAnomalies = await utilities.retrieveThermalAnomalies(apiUrl);
+
+    if (thermalAnomalies.length === 0) {
+        let yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayApiUrl = utilities.buildApiUrl(box, yesterday);
+        thermalAnomalies = await utilities.retrieveThermalAnomalies(yesterdayApiUrl);
+    }
+
     thermalAnomalies = thermalAnomalies.filter(function (point) {
         return utilities.pointInCircle(lat,long,point.latitude,point.longitude,radius)
     });
@@ -82,8 +90,8 @@ app.post('/createEventDTO', async (req,res) => {
     }
     
     //Chequeo de AT
-    const box = utilities.areaCoordinates(lat,long,0.4);
-    const apiUrl = utilities.buildApiUrl(box);
+    const box = utilities.areaCoordinates(lat,long,0.5);
+    const apiUrl = utilities.buildApiUrl(box, new Date());
     let thermalAnomalies = await utilities.retrieveThermalAnomalies(apiUrl);
     if (!thermalAnomalies.length) {
         res.status(422).json({
